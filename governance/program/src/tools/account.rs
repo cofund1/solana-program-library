@@ -26,6 +26,7 @@ pub enum AccountLifetime {
     Temporary,
 }
 
+/// Number of days to keep temporary accounts (we'll put that much rent in)
 pub const TEMPORARY_LIFETIME_DAYS: i32 = 7;
 
 /// Creates a new account and serializes data into it using the provided seeds to invoke signed CPI call
