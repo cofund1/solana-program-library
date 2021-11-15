@@ -17,6 +17,17 @@ pub trait AccountMaxSize {
     }
 }
 
+/// Account lifetime
+pub enum AccountLifetime {
+    /// Account should be rent-exempt
+    Permanent,
+
+    /// Account should have enough rent to last k days
+    Temporary,
+}
+
+pub const TEMPORARY_LIFETIME_DAYS: i32 = 7;
+
 /// Creates a new account and serializes data into it using the provided seeds to invoke signed CPI call
 /// Note: This functions also checks the provided account PDA matches the supplied seeds
 pub fn create_and_serialize_account_signed<'a, T: BorshSerialize + AccountMaxSize>(
@@ -27,6 +38,7 @@ pub fn create_and_serialize_account_signed<'a, T: BorshSerialize + AccountMaxSiz
     program_id: &Pubkey,
     system_info: &AccountInfo<'a>,
     rent: &Rent,
+    lifetime: &AccountLifetime,
 ) -> Result<(), ProgramError> {
     // Get PDA and assert it's the same as the requested account address
     let (account_address, bump_seed) =
@@ -49,10 +61,14 @@ pub fn create_and_serialize_account_signed<'a, T: BorshSerialize + AccountMaxSiz
         (Some(serialized_data), account_size)
     };
 
+    let lamports = match lifetime {
+        AccountLifetime::Permanent => rent.minimum_balance(account_size),
+        AccountLifetime::Temporary => rent.due(0, account_size, f64::from(TEMPORARY_LIFETIME_DAYS) / 365.0).0,
+    };
     let create_account_instruction = create_account(
         payer_info.key,
         account_info.key,
-        rent.minimum_balance(account_size),
+        lamports,
         account_size as u64,
         program_id,
     );

@@ -12,7 +12,9 @@ use crate::{
         token_owner_record::get_token_owner_record_data_for_realm,
     },
     tools::{
-        account::create_and_serialize_account_signed,
+        account::{
+            create_and_serialize_account_signed, AccountLifetime,
+        },
         bpf_loader_upgradeable::{
             assert_program_upgrade_authority_is_signer, set_program_upgrade_authority,
         },
@@ -77,6 +79,7 @@ pub fn process_create_program_governance(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Permanent,
     )?;
 
     if transfer_upgrade_authority {

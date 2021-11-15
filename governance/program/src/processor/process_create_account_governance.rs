@@ -10,7 +10,9 @@ use crate::{
         realm::get_realm_data,
         token_owner_record::get_token_owner_record_data_for_realm,
     },
-    tools::account::create_and_serialize_account_signed,
+    tools::account::{
+        create_and_serialize_account_signed, AccountLifetime,
+    }
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -65,6 +67,7 @@ pub fn process_create_account_governance(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Permanent,
     )?;
 
     Ok(())

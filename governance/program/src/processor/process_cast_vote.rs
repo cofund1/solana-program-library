@@ -23,7 +23,9 @@ use crate::{
         },
         vote_record::{get_vote_record_address_seeds, VoteRecord},
     },
-    tools::{account::create_and_serialize_account_signed, spl_token::get_spl_token_mint_supply},
+    tools::{account::{
+        create_and_serialize_account_signed, AccountLifetime,
+    }, spl_token::get_spl_token_mint_supply},
 };
 
 use borsh::BorshSerialize;
@@ -161,6 +163,7 @@ pub fn process_cast_vote(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Temporary,
     )?;
 
     Ok(())

@@ -16,7 +16,9 @@ use crate::{
         signatory_record::{get_signatory_record_address_seeds, SignatoryRecord},
         token_owner_record::get_token_owner_record_data_for_proposal_owner,
     },
-    tools::account::create_and_serialize_account_signed,
+    tools::account::{
+        create_and_serialize_account_signed, AccountLifetime,
+    },
 };
 
 /// Processes AddSignatory instruction
@@ -65,6 +67,7 @@ pub fn process_add_signatory(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Temporary,
     )?;
 
     proposal_data.signatories_count = proposal_data.signatories_count.checked_add(1).unwrap();

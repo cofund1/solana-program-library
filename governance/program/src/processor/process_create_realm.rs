@@ -18,7 +18,10 @@ use crate::{
         },
     },
     tools::{
-        account::create_and_serialize_account_signed, spl_token::create_spl_token_account_signed,
+        account::{
+            create_and_serialize_account_signed, AccountLifetime,
+        },
+        spl_token::create_spl_token_account_signed,
     },
 };
 
@@ -108,6 +111,7 @@ pub fn process_create_realm(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Permanent,
     )?;
 
     Ok(())

@@ -11,7 +11,9 @@ use crate::{
         token_owner_record::get_token_owner_record_data_for_realm,
     },
     tools::{
-        account::create_and_serialize_account_signed,
+        account::{
+            create_and_serialize_account_signed, AccountLifetime,
+        },
         spl_token::{assert_spl_token_owner_is_signer, set_spl_token_owner},
     },
 };
@@ -73,6 +75,7 @@ pub fn process_create_token_governance(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Permanent,
     )?;
 
     if transfer_token_owner {

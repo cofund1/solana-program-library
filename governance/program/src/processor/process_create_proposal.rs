@@ -19,7 +19,9 @@ use crate::{
         realm::get_realm_data_for_governing_token_mint,
         token_owner_record::get_token_owner_record_data_for_realm,
     },
-    tools::account::create_and_serialize_account_signed,
+    tools::account::{
+        create_and_serialize_account_signed, AccountLifetime,
+    },
 };
 
 /// Processes CreateProposal instruction
@@ -122,6 +124,7 @@ pub fn process_create_proposal(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Temporary,
     )?;
 
     governance_data.proposals_count = governance_data.proposals_count.checked_add(1).unwrap();

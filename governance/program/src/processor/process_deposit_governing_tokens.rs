@@ -20,7 +20,9 @@ use crate::{
         },
     },
     tools::{
-        account::create_and_serialize_account_signed,
+        account::{
+            create_and_serialize_account_signed, AccountLifetime,
+        },
         spl_token::{
             get_spl_token_amount, get_spl_token_mint, get_spl_token_owner, transfer_spl_tokens,
         },
@@ -104,6 +106,7 @@ pub fn process_deposit_governing_tokens(
             program_id,
             system_info,
             rent,
+            &AccountLifetime::Permanent,
         )?;
     } else {
         let mut token_owner_record_data = get_token_owner_record_data_for_seeds(

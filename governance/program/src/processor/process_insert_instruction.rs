@@ -22,7 +22,7 @@ use crate::{
         },
         token_owner_record::get_token_owner_record_data_for_proposal_owner,
     },
-    tools::account::create_and_serialize_account_signed,
+    tools::account::{create_and_serialize_account_signed, AccountLifetime},
 };
 
 /// Processes InsertInstruction instruction
@@ -107,6 +107,7 @@ pub fn process_insert_instruction(
         program_id,
         system_info,
         rent,
+        &AccountLifetime::Temporary,
     )?;
 
     Ok(())
