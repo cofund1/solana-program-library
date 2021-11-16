@@ -209,13 +209,14 @@ impl Proposal {
     pub fn finalize_vote(
         &mut self,
         governing_token_mint_supply: u64,
+        governing_token_deposited_volume: u64,
         config: &GovernanceConfig,
         realm_data: &Realm,
         current_unix_timestamp: UnixTimestamp,
     ) -> Result<(), ProgramError> {
         self.assert_can_finalize_vote(config, current_unix_timestamp)?;
 
-        let max_vote_weight = self.get_max_vote_weight(realm_data, governing_token_mint_supply)?;
+        let max_vote_weight = self.get_max_vote_weight(realm_data, governing_token_mint_supply, governing_token_deposited_volume)?;
 
         self.state = self.get_final_vote_state(max_vote_weight, config);
         self.voting_completed_at = Some(current_unix_timestamp);
@@ -252,20 +253,21 @@ impl Proposal {
     fn get_max_vote_weight(
         &mut self,
         realm_data: &Realm,
-        governing_token_mint_supply: u64,
+        _governing_token_mint_supply: u64,
+        governing_token_deposited_volume: u64,
     ) -> Result<u64, ProgramError> {
         // max vote weight fraction is only used for community mint
         if Some(self.governing_token_mint) == realm_data.config.council_mint {
-            return Ok(governing_token_mint_supply);
+            return Ok(governing_token_deposited_volume);
         }
 
         match realm_data.config.community_mint_max_vote_weight_source {
             MintMaxVoteWeightSource::SupplyFraction(fraction) => {
                 if fraction == MintMaxVoteWeightSource::SUPPLY_FRACTION_BASE {
-                    return Ok(governing_token_mint_supply);
+                    return Ok(governing_token_deposited_volume);
                 }
 
-                let max_vote_weight = (governing_token_mint_supply as u128)
+                let max_vote_weight = (governing_token_deposited_volume as u128)
                     .checked_mul(fraction as u128)
                     .unwrap()
                     .checked_div(MintMaxVoteWeightSource::SUPPLY_FRACTION_BASE as u128)
@@ -291,11 +293,12 @@ impl Proposal {
     pub fn try_tip_vote(
         &mut self,
         governing_token_mint_supply: u64,
+        governing_token_deposited_volume: u64,
         config: &GovernanceConfig,
         realm_data: &Realm,
         current_unix_timestamp: UnixTimestamp,
     ) -> Result<bool, ProgramError> {
-        let max_vote_weight = self.get_max_vote_weight(realm_data, governing_token_mint_supply)?;
+        let max_vote_weight = self.get_max_vote_weight(realm_data, governing_token_mint_supply, governing_token_deposited_volume)?;
 
         if let Some(tipped_state) = self.try_get_tipped_vote_state(max_vote_weight, config) {
             self.state = tipped_state;
@@ -968,7 +971,7 @@ mod test {
             let realm = create_test_realm();
 
             // Act
-            proposal.try_tip_vote(test_case.governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
+            proposal.try_tip_vote(test_case.governing_token_supply, test_case.governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
 
             // Assert
             assert_eq!(proposal.state,test_case.expected_tipped_state,"CASE: {:?}",test_case);
@@ -994,7 +997,7 @@ mod test {
             let realm = create_test_realm();
 
             // Act
-            proposal.finalize_vote(test_case.governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
+            proposal.finalize_vote(test_case.governing_token_supply, test_case.governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
 
             // Assert
             assert_eq!(proposal.state,test_case.expected_finalized_state,"CASE: {:?}",test_case);
@@ -1039,7 +1042,7 @@ mod test {
             let realm = create_test_realm();
 
             // Act
-            proposal.try_tip_vote(governing_token_supply, &governance_config,&realm, current_timestamp).unwrap();
+            proposal.try_tip_vote(governing_token_supply, governing_token_supply, &governance_config,&realm, current_timestamp).unwrap();
 
             // Assert
             let yes_vote_threshold_count = get_yes_vote_threshold_count(&yes_vote_threshold_percentage,governing_token_supply).unwrap();
@@ -1079,7 +1082,7 @@ mod test {
             let realm = create_test_realm();
 
             // Act
-            proposal.finalize_vote(governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
+            proposal.finalize_vote(governing_token_supply, governing_token_supply, &governance_config,&realm,current_timestamp).unwrap();
 
             // Assert
             let yes_vote_threshold_count = get_yes_vote_threshold_count(&yes_vote_threshold_percentage,governing_token_supply).unwrap();
@@ -1119,6 +1122,7 @@ mod test {
         // Act
         proposal
             .try_tip_vote(
+                community_token_supply,
                 community_token_supply,
                 &governance_config,
                 &realm,
@@ -1161,6 +1165,7 @@ mod test {
         proposal
             .try_tip_vote(
                 community_token_supply,
+                community_token_supply,
                 &governance_config,
                 &realm,
                 current_timestamp,
@@ -1198,6 +1203,7 @@ mod test {
         proposal
             .try_tip_vote(
                 community_token_supply,
+                community_token_supply,
                 &governance_config,
                 &realm,
                 current_timestamp,
@@ -1233,6 +1239,7 @@ mod test {
         // Act
         proposal
             .finalize_vote(
+                community_token_supply,
                 community_token_supply,
                 &governance_config,
                 &realm,
@@ -1274,6 +1281,7 @@ mod test {
         proposal
             .finalize_vote(
                 community_token_supply,
+                community_token_supply,
                 &governance_config,
                 &realm,
                 current_timestamp,
@@ -1299,7 +1307,7 @@ mod test {
 
         // Act
         let err = proposal
-            .finalize_vote(100, &governance_config, &realm, current_timestamp)
+            .finalize_vote(100, 100, &governance_config, &realm, current_timestamp)
             .err()
             .unwrap();
 
@@ -1319,7 +1327,7 @@ mod test {
 
         let realm = create_test_realm();
         // Act
-        let result = proposal.finalize_vote(100, &governance_config, &realm, current_timestamp);
+        let result = proposal.finalize_vote(100, 100, &governance_config, &realm, current_timestamp);
 
         // Assert
         assert_eq!(result, Ok(()));

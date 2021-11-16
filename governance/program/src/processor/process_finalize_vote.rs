@@ -15,7 +15,7 @@ use crate::{
         realm::get_realm_data_for_governing_token_mint,
         token_owner_record::get_token_owner_record_data_for_proposal_owner,
     },
-    tools::spl_token::get_spl_token_mint_supply,
+    tools::spl_token::{get_spl_token_mint, get_spl_token_mint_supply, get_spl_token_amount},
 };
 
 use borsh::BorshSerialize;
@@ -34,11 +34,20 @@ pub fn process_finalize_vote(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     let clock_info = next_account_info(account_info_iter)?; // 5
     let clock = Clock::from_account_info(clock_info)?;
 
+    let governing_token_holding_info = next_account_info(account_info_iter)?; // 6
+
     let realm_data = get_realm_data_for_governing_token_mint(
         program_id,
         realm_info,
         governing_token_mint_info.key,
     )?;
+    realm_data.assert_is_valid_governing_token_mint_and_holding(
+        program_id,
+        realm_info.key,
+        &get_spl_token_mint(governing_token_holding_info)?,
+        governing_token_holding_info.key
+    )?;
+
     let governance_data =
         get_governance_data_for_realm(program_id, governance_info, realm_info.key)?;
 
@@ -50,9 +59,11 @@ pub fn process_finalize_vote(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     )?;
 
     let governing_token_mint_supply = get_spl_token_mint_supply(governing_token_mint_info)?;
+    let governing_token_deposited_volume = get_spl_token_amount(governing_token_holding_info)?;
 
     proposal_data.finalize_vote(
         governing_token_mint_supply,
+        governing_token_deposited_volume,
         &governance_data.config,
         &realm_data,
         clock.unix_timestamp,

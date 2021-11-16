@@ -25,7 +25,7 @@ use crate::{
     },
     tools::{account::{
         create_and_serialize_account_signed, AccountLifetime,
-    }, spl_token::get_spl_token_mint_supply},
+    }, spl_token::{get_spl_token_mint, get_spl_token_mint_supply, get_spl_token_amount}},
 };
 
 use borsh::BorshSerialize;
@@ -59,6 +59,8 @@ pub fn process_cast_vote(
     let clock_info = next_account_info(account_info_iter)?; // 11
     let clock = Clock::from_account_info(clock_info)?;
 
+    let governing_token_holding_info = next_account_info(account_info_iter)?; // 12
+
     if !vote_record_info.data_is_empty() {
         return Err(GovernanceError::VoteAlreadyExists.into());
     }
@@ -68,6 +70,13 @@ pub fn process_cast_vote(
         realm_info,
         governing_token_mint_info.key,
     )?;
+    realm_data.assert_is_valid_governing_token_mint_and_holding(
+        program_id,
+        realm_info.key,
+        &get_spl_token_mint(governing_token_holding_info)?,
+        governing_token_holding_info.key
+    )?;
+
     let governance_data =
         get_governance_data_for_realm(program_id, governance_info, realm_info.key)?;
 
@@ -121,8 +130,10 @@ pub fn process_cast_vote(
     };
 
     let governing_token_mint_supply = get_spl_token_mint_supply(governing_token_mint_info)?;
+    let governing_token_deposited_volume = get_spl_token_amount(governing_token_holding_info)?;
     if proposal_data.try_tip_vote(
         governing_token_mint_supply,
+        governing_token_deposited_volume,
         &governance_data.config,
         &realm_data,
         clock.unix_timestamp,
